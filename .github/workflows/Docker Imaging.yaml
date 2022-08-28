@@ -26,3 +26,10 @@ jobs:
 
       - name: Dockerhub Push
         run: docker push $DOCKER_REPOSITORY --all-tags
+  
+  PortainerHooks:
+    runs-on: ubuntu-20.04
+    needs: DockerImagingService
+    steps:
+      - name: Portainer Hook Update
+        run: curl -X POST ${{ secrets.DEVELOPMENT_URL_HOOKS }}
