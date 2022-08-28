@@ -20,13 +20,15 @@ func main() {
 
 	e := echo.New()
 
-	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"http://local.kaenova.my.id:3000"},
-		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderUpgrade},
-	}))
+	// e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+	// 	AllowOrigins: []string{"http://local.kaenova.my.id:3000"},
+	// 	AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderUpgrade},
+	// }))
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
 
 	liveChat := livechat.NewLiveChatSerice(cfg.HCaptchaSecret)
 	liveChat.RegisterEchoRoute(e)
 
-	e.Logger.Fatal(e.Start("0.0.0.0:1323"))
+	e.Logger.Fatal(e.Start(":1323"))
 }

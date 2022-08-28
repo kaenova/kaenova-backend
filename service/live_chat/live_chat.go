@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/gorilla/websocket"
 	"github.com/kaenova/kaenova-backend/service/live_chat/model"
 	"github.com/kaenova/kaenova-backend/utils"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/net/websocket"
 )
 
 var typeValidator = validator.New()
@@ -139,52 +139,51 @@ func (s *LiveChatService) resolveWSMsgToMsg(wsMsg webSocketMessage) (model.Messa
 	}, nil
 }
 
-var upgrader = websocket.Upgrader{}
-
 func (s *LiveChatService) chatWebSocket(c echo.Context) error {
+	handler := websocket.Handler(func(ws *websocket.Conn) {
+		defer ws.Close()
+		// Add connection to websocket connection pool
+		s.addWebSocketConnection(ws)
 
-	// Upgrade to websocket
-	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
-	if err != nil {
-		return err
-	}
+		for {
+			// Read message from client
+			msg := ""
+			err := websocket.Message.Receive(ws, &msg)
+			if err != nil {
+				log.Println(err.Error())
+				continue
+			}
 
-	defer ws.Close()
+			// Bind message
+			var wsMsg webSocketMessage
+			err = json.Unmarshal([]byte(msg), &wsMsg)
+			if err != nil {
+				websocket.Message.Send(ws, "cannot unmarshal")
+				continue
+			}
 
-	// Add connection to websocket connection pool
-	s.addWebSocketConnection(ws)
+			// Resolve to message
+			finalMsg, err := s.resolveWSMsgToMsg(wsMsg)
+			if err != nil {
+				websocket.Message.Send(ws, err.Error())
+				continue
+			}
 
-	for {
-		// Read message from client
-		_, msg, err := ws.ReadMessage()
-		if err != nil {
-			log.Println(err.Error())
-			return nil
-		}
+			// Append finalMsg
+			s.addMessage(finalMsg)
 
-		// Bind message
-		var wsMsg webSocketMessage
-		err = json.Unmarshal([]byte(msg), &wsMsg)
-		if err != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte("cannot unmarshal"))
-			continue
-		}
-
-		// Resolve to message
-		finalMsg, err := s.resolveWSMsgToMsg(wsMsg)
-		if err != nil {
-			ws.WriteMessage(websocket.TextMessage, []byte(err.Error()))
-			continue
-		}
-
-		// Append finalMsg
-		s.addMessage(finalMsg)
-
-		// Send message to all connection
-		for _, v := range s.ActiveConnection {
-			if v != ws {
-				v.WriteJSON(finalMsg)
+			// Send message to all connection
+			for _, v := range s.ActiveConnection {
+				if v != ws {
+					websocket.JSON.Send(v, finalMsg)
+				}
 			}
 		}
+	})
+
+	wserver := websocket.Server{
+		Handler: handler,
 	}
+	wserver.ServeHTTP(c.Response(), c.Request())
+	return nil
 }
