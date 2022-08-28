@@ -3,11 +3,11 @@ package main
 import (
 	"log"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
 	"github.com/kaenova/kaenova-backend/config"
 	livechat "github.com/kaenova/kaenova-backend/service/live_chat"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
@@ -18,17 +18,26 @@ func main() {
 
 	cfg := config.MakeConfig()
 
-	e := echo.New()
+	// e := echo.New()
 
-	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"http://local.kaenova.my.id:3000"},
-		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderUpgrade},
+	// e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+	// 	AllowOrigins: []string{"http://local.kaenova.my.id:3000"},
+	// 	AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderUpgrade},
+	// }))
+	// e.Use(middleware.Logger())
+	// // e.Use(middleware.Recover())
+
+	f := fiber.New()
+
+	f.Use(cors.New(cors.Config{
+		AllowOrigins: "http://local.kaenova.my.id:3000",
+		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
-	e.Use(middleware.Logger())
-	// e.Use(middleware.Recover())
 
 	liveChat := livechat.NewLiveChatSerice(cfg.HCaptchaSecret)
-	liveChat.RegisterEchoRoute(e)
+	liveChat.RegisterRoute(f)
 
-	e.Logger.Fatal(e.Start(":1323"))
+	f.Listen(":1323")
+
+	// e.Logger.Fatal(e.Start(":1323"))
 }

@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
+	"github.com/google/uuid"
 	"github.com/kaenova/kaenova-backend/service/live_chat/model"
 	"github.com/kaenova/kaenova-backend/utils"
 	"github.com/labstack/echo/v4"
-	"golang.org/x/net/websocket"
 )
 
 var typeValidator = validator.New()
@@ -26,7 +28,12 @@ type LiveChatService struct {
 	Messages           []model.Message
 	AuthenticatedUser  []model.User
 
-	ActiveConnection []*websocket.Conn
+	ActiveConnection []WebSocketConnection
+}
+
+type WebSocketConnection struct {
+	Con *websocket.Conn
+	ID  uuid.UUID
 }
 
 func NewLiveChatSerice(hCaptchaPrivateKey string) LiveChatService {
@@ -51,24 +58,44 @@ func (s *LiveChatService) addMessage(m model.Message) {
 	s.Messages = append(s.Messages, m)
 }
 
-func (s *LiveChatService) addWebSocketConnection(ws *websocket.Conn) {
-	s.ActiveConnection = append(s.ActiveConnection, ws)
+func (s *LiveChatService) addWebSocketConnection(ws *websocket.Conn) uuid.UUID {
+	id := uuid.New()
+	s.ActiveConnection = append(s.ActiveConnection, WebSocketConnection{
+		Con: ws,
+		ID:  id,
+	})
+	return id
 }
 
-func (s *LiveChatService) RegisterEchoRoute(e *echo.Echo) {
+func (s *LiveChatService) deleteWebSocketConnection(id uuid.UUID) {
+	var idx int = -1
+	for i, v := range s.ActiveConnection {
+		if id == v.ID {
+			idx = i
+		}
+	}
+
+	if idx == -1 {
+		panic("id not found")
+	}
+
+	s.ActiveConnection = append(s.ActiveConnection[:idx], s.ActiveConnection[idx+1:]...)
+}
+
+func (s *LiveChatService) RegisterRoute(e *fiber.App) {
 	g := e.Group("/livechat")
-	g.GET("/hello", s.helloWorld)
-	g.POST("/register", s.registerUser)
-	g.GET("/chat", s.getAllChat)
-	g.GET("/ws", s.chatWebSocket)
+	g.Get("/hello", s.helloWorld)
+	g.Post("/register", s.registerUser)
+	g.Get("/chat", s.getAllChat)
+	g.Get("/ws", s.chatWebSocket())
 }
 
-func (s *LiveChatService) helloWorld(c echo.Context) error {
-	return c.String(http.StatusOK, "hello from livechat service")
+func (s *LiveChatService) helloWorld(c *fiber.Ctx) error {
+	return c.SendString("hello from livechat service")
 }
 
-func (s *LiveChatService) getAllChat(c echo.Context) error {
-	return c.JSON(http.StatusOK, s.Messages)
+func (s *LiveChatService) getAllChat(c *fiber.Ctx) error {
+	return c.JSON(s.Messages)
 }
 
 type handleRegisterUser struct {
@@ -76,10 +103,10 @@ type handleRegisterUser struct {
 	HCaptchaCode string `json:"hcaptcha" validate:"required"`
 }
 
-func (s *LiveChatService) registerUser(c echo.Context) error {
+func (s *LiveChatService) registerUser(c *fiber.Ctx) error {
 	var req handleRegisterUser
 
-	if err := c.Bind(&req); err != nil {
+	if err := c.BodyParser(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -95,18 +122,17 @@ func (s *LiveChatService) registerUser(c echo.Context) error {
 	})
 
 	if err != nil {
-		log.Println(err.Error())
-		return c.String(http.StatusInternalServerError, err.Error())
+		return c.Status(http.StatusInternalServerError).SendString(err.Error())
 	}
 
 	if !valid {
-		return c.String(http.StatusBadRequest, "not a valid human request")
+		return c.Status(http.StatusBadRequest).SendString("not a valid human request")
 	}
 
 	user := model.CreateUser(req.Name)
 	s.addAuthenticatedUser(user)
 
-	return c.String(http.StatusOK, user.ID)
+	return c.SendString(user.ID)
 }
 
 type webSocketMessage struct {
@@ -139,33 +165,33 @@ func (s *LiveChatService) resolveWSMsgToMsg(wsMsg webSocketMessage) (model.Messa
 	}, nil
 }
 
-func (s *LiveChatService) chatWebSocket(c echo.Context) error {
-	handler := websocket.Handler(func(ws *websocket.Conn) {
-		defer ws.Close()
-		// Add connection to websocket connection pool
-		s.addWebSocketConnection(ws)
-
+func (s *LiveChatService) chatWebSocket() func(*fiber.Ctx) error {
+	return websocket.New(func(ws *websocket.Conn) {
+		id := s.addWebSocketConnection(ws)
+		defer func() {
+			ws.Close()
+			s.deleteWebSocketConnection(id)
+		}()
 		for {
 			// Read message from client
-			msg := ""
-			err := websocket.Message.Receive(ws, &msg)
+			_, msg, err := ws.ReadMessage()
 			if err != nil {
 				log.Println(err.Error())
-				continue
+				break
 			}
 
 			// Bind message
 			var wsMsg webSocketMessage
 			err = json.Unmarshal([]byte(msg), &wsMsg)
 			if err != nil {
-				websocket.Message.Send(ws, "cannot unmarshal")
+				ws.WriteMessage(websocket.TextMessage, []byte("cannot unmarshal"))
 				continue
 			}
 
 			// Resolve to message
 			finalMsg, err := s.resolveWSMsgToMsg(wsMsg)
 			if err != nil {
-				websocket.Message.Send(ws, err.Error())
+				ws.WriteMessage(websocket.TextMessage, []byte(err.Error()))
 				continue
 			}
 
@@ -174,16 +200,10 @@ func (s *LiveChatService) chatWebSocket(c echo.Context) error {
 
 			// Send message to all connection
 			for _, v := range s.ActiveConnection {
-				if v != ws && v != nil {
-					websocket.JSON.Send(v, finalMsg)
+				if v.ID != id {
+					v.Con.WriteJSON(finalMsg)
 				}
 			}
 		}
 	})
-
-	wserver := websocket.Server{
-		Handler: handler,
-	}
-	wserver.ServeHTTP(c.Response(), c.Request())
-	return nil
 }
