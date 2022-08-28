@@ -106,7 +106,7 @@ func (s *LiveChatService) registerUser(c echo.Context) error {
 	user := model.CreateUser(req.Name)
 	s.addAuthenticatedUser(user)
 
-	return c.JSON(http.StatusOK, user)
+	return c.String(http.StatusOK, user.ID)
 }
 
 type webSocketMessage struct {
@@ -174,7 +174,7 @@ func (s *LiveChatService) chatWebSocket(c echo.Context) error {
 
 			// Send message to all connection
 			for _, v := range s.ActiveConnection {
-				if v != ws {
+				if v != ws && v != nil {
 					websocket.JSON.Send(v, finalMsg)
 				}
 			}
