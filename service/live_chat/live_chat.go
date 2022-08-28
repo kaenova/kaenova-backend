@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kaenova/kaenova-backend/service/live_chat/model"
 	"github.com/kaenova/kaenova-backend/utils"
-	"github.com/labstack/echo/v4"
 )
 
 var typeValidator = validator.New()
@@ -107,7 +106,7 @@ func (s *LiveChatService) registerUser(c *fiber.Ctx) error {
 	var req handleRegisterUser
 
 	if err := c.BodyParser(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return c.Status(400).SendString(err.Error())
 	}
 
 	err := typeValidator.Struct(req)
