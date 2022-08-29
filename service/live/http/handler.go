@@ -19,8 +19,8 @@ func (h *HttpService) getStatus(c *fiber.Ctx) error {
 }
 
 type handleOnline struct {
-	Title    string `json:"name"`
-	Password string `json:"password" validate:"required"`
+	Title    string `json:"title" xml:"title" form:"title" validate:"required"`
+	Password string `json:"password" xml:"password" form:"password" validate:"required"`
 }
 
 func (h *HttpService) goLive(c *fiber.Ctx) error {
@@ -47,7 +47,7 @@ func (h *HttpService) goLive(c *fiber.Ctx) error {
 }
 
 type handleOffline struct {
-	Password string `json:"password" validate:"required"`
+	Password string `json:"password" xml:"password" form:"password" validate:"required"`
 }
 
 func (h *HttpService) goOffline(c *fiber.Ctx) error {
