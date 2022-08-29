@@ -2,8 +2,8 @@ package http
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/kaenova/kaenova-backend/service/live_chat/config"
-	"github.com/kaenova/kaenova-backend/service/live_chat/repository"
+	"github.com/kaenova/kaenova-backend/service/live/config"
+	"github.com/kaenova/kaenova-backend/service/live/repository"
 )
 
 type HttpService struct {
@@ -23,8 +23,9 @@ func NewHttpService(r repository.RepositoryI, c *config.Config) HttpServiceI {
 }
 
 func (h *HttpService) RegisterHttpRoute(e *fiber.App) {
-	g := e.Group("/livechat")
+	g := e.Group("/live")
 	g.Get("/hello", h.helloWorld)
-	g.Post("/register", h.registerUser)
-	g.Get("/chat", h.getAllChat)
+	g.Get("/status", h.getStatus)
+	g.Post("/golive", h.goLive)
+	g.Post("/goofline", h.goOffline)
 }

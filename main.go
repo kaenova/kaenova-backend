@@ -6,8 +6,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
+	live "github.com/kaenova/kaenova-backend/service/live"
+	liveCfg "github.com/kaenova/kaenova-backend/service/live/config"
 	livechat "github.com/kaenova/kaenova-backend/service/live_chat"
-	"github.com/kaenova/kaenova-backend/service/live_chat/config"
+	livechatCfg "github.com/kaenova/kaenova-backend/service/live_chat/config"
 	"github.com/kaenova/kaenova-backend/utils"
 )
 
@@ -24,11 +26,18 @@ func main() {
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
 
-	liveChat := livechat.NewLiveChatSerice(config.Config{
+	// Live Chat Serivce
+	liveChat := livechat.NewLiveChatSerice(livechatCfg.Config{
 		HCaptchaSecret: utils.EnvOrDefault("HCAPTCHA_SECRET", "0x0000000000000000000000000000000000000000"),
 	})
-	liveChat.Http.RegisterRoute(f)
-	liveChat.Websocket.RegisterWebsocketRoute(f)
+	liveChat.RegisterHttpRoute(f)
+	liveChat.RegisterWebsocketRoute(f)
+
+	// Live Service
+	live := live.NewLiveChatSerice(liveCfg.Config{
+		LiveKeyPassword: utils.EnvOrDefault("LIVE_PASSWORD", "changeme"),
+	})
+	live.RegisterHttpRoute(f)
 
 	f.Listen(":1323")
 }

@@ -8,22 +8,27 @@ import (
 )
 
 type LiveChatService struct {
-	Config     config.Config
-	Repository repository.Repository
-	Websocket  websocket.WebScoketService
-	Http       http.HttpService
+	Config config.Config
+	repository.RepositoryI
+	websocket.WebSocketServiceI
+	http.HttpServiceI
 }
 
-func NewLiveChatSerice(c config.Config) LiveChatService {
+type LiveChatSerivceI interface {
+	http.HttpServiceI
+	websocket.WebSocketServiceI
+}
+
+func NewLiveChatSerice(c config.Config) LiveChatSerivceI {
 
 	repo := repository.NewRepository()
-	httpI := http.NewHttpService(&repo, &c)
-	websocketI := websocket.NewWebsocketService(&repo)
+	httpI := http.NewHttpService(repo, &c)
+	websocketI := websocket.NewWebsocketService(repo)
 
 	return LiveChatService{
-		Config:     c,
-		Repository: repo,
-		Websocket:  websocketI,
-		Http:       httpI,
+		Config:            c,
+		RepositoryI:       repo,
+		WebSocketServiceI: websocketI,
+		HttpServiceI:      httpI,
 	}
 }

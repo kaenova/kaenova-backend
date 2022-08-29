@@ -8,9 +8,13 @@ import (
 )
 
 type WebScoketService struct {
-	R *repository.Repository
+	R repository.RepositoryI
 
 	ActiveConnection []WebSocketConnection
+}
+
+type WebSocketServiceI interface {
+	RegisterWebsocketRoute(e *fiber.App)
 }
 
 type WebSocketConnection struct {
@@ -42,8 +46,8 @@ func (s *WebScoketService) deleteWebSocketConnection(id uuid.UUID) {
 	s.ActiveConnection = append(s.ActiveConnection[:idx], s.ActiveConnection[idx+1:]...)
 }
 
-func NewWebsocketService(r *repository.Repository) WebScoketService {
-	return WebScoketService{
+func NewWebsocketService(r repository.RepositoryI) WebSocketServiceI {
+	return &WebScoketService{
 		R: r,
 	}
 }

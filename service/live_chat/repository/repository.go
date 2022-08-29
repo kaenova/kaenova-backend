@@ -10,8 +10,16 @@ type Repository struct {
 	AuthenticatedUser []model.User
 }
 
-func NewRepository() Repository {
-	return Repository{
+type RepositoryI interface {
+	AddAuthenticatedUser(u model.User)
+	AddMessage(m model.Message)
+
+	GetAllMessages() []model.Message
+	GetAllAuthenticatedUser() []model.User
+}
+
+func NewRepository() RepositoryI {
+	return &Repository{
 		Messages:          []model.Message{},
 		AuthenticatedUser: []model.User{},
 	}
@@ -29,4 +37,12 @@ func (s *Repository) AddMessage(m model.Message) {
 		s.Messages = s.Messages[1:]
 	}
 	s.Messages = append(s.Messages, m)
+}
+
+func (s *Repository) GetAllMessages() []model.Message {
+	return s.Messages
+}
+
+func (s *Repository) GetAllAuthenticatedUser() []model.User {
+	return s.AuthenticatedUser
 }

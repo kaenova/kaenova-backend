@@ -20,7 +20,7 @@ func (s *WebScoketService) resolveWSMsgToMsg(wsMsg webSocketMessage) (model.Mess
 	var user *model.User
 
 	// search for user
-	for _, v := range s.R.AuthenticatedUser {
+	for _, v := range s.R.GetAllAuthenticatedUser() {
 		if wsMsg.UserID == v.ID {
 			user = &v
 			break

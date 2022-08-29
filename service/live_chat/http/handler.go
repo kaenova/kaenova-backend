@@ -16,8 +16,7 @@ func (h *HttpService) helloWorld(c *fiber.Ctx) error {
 }
 
 func (h *HttpService) getAllChat(c *fiber.Ctx) error {
-	return c.JSON(h.R.Messages)
-
+	return c.JSON(h.R.GetAllMessages())
 }
 
 type handleRegisterUser struct {
