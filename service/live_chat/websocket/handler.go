@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -66,6 +67,10 @@ func (s *WebScoketService) wsHandlerchatWebSocket() func(*fiber.Ctx) error {
 			err = json.Unmarshal([]byte(msg), &wsMsg)
 			if err != nil {
 				ws.WriteMessage(websocket.TextMessage, []byte("cannot unmarshal"))
+				continue
+			}
+
+			if strings.TrimSpace(wsMsg.Message) == "" {
 				continue
 			}
 
