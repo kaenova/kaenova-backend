@@ -1,6 +1,8 @@
 package http
 
 import (
+	"log"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/kaenova/kaenova-backend/service/live/repository"
@@ -28,6 +30,8 @@ func (h *HttpService) goLive(c *fiber.Ctx) error {
 		return c.Status(400).SendString(err.Error())
 	}
 
+	log.Println(req)
+
 	err := typeValidator.Struct(req)
 	if err != nil {
 		return err
@@ -42,6 +46,29 @@ func (h *HttpService) goLive(c *fiber.Ctx) error {
 	return c.SendStatus(200)
 }
 
+type handleOffline struct {
+	Password string `json:"password" validate:"required"`
+}
+
 func (h *HttpService) goOffline(c *fiber.Ctx) error {
-	return c.JSON(h.R.GetLiveState())
+	var req handleOffline
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).SendString(err.Error())
+	}
+
+	log.Println(req)
+
+	err := typeValidator.Struct(req)
+	if err != nil {
+		return err
+	}
+
+	if req.Password != h.Cfg.LiveKeyPassword {
+		return c.SendStatus(400)
+	}
+
+	h.R.GoOffline()
+
+	return c.SendStatus(200)
 }
