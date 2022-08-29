@@ -6,8 +6,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
-	"github.com/kaenova/kaenova-backend/config"
 	livechat "github.com/kaenova/kaenova-backend/service/live_chat"
+	"github.com/kaenova/kaenova-backend/service/live_chat/config"
+	"github.com/kaenova/kaenova-backend/utils"
 )
 
 func main() {
@@ -16,17 +17,6 @@ func main() {
 		log.Println("Error loading .env file")
 	}
 
-	cfg := config.MakeConfig()
-
-	// e := echo.New()
-
-	// e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-	// 	AllowOrigins: []string{"http://local.kaenova.my.id:3000"},
-	// 	AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderUpgrade},
-	// }))
-	// e.Use(middleware.Logger())
-	// // e.Use(middleware.Recover())
-
 	f := fiber.New()
 
 	f.Use(cors.New(cors.Config{
@@ -34,10 +24,11 @@ func main() {
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
 
-	liveChat := livechat.NewLiveChatSerice(cfg.HCaptchaSecret)
-	liveChat.RegisterRoute(f)
+	liveChat := livechat.NewLiveChatSerice(config.Config{
+		HCaptchaSecret: utils.EnvOrDefault("HCAPTCHA_SECRET", "0x0000000000000000000000000000000000000000"),
+	})
+	liveChat.Http.RegisterRoute(f)
+	liveChat.Websocket.RegisterWebsocketRoute(f)
 
 	f.Listen(":1323")
-
-	// e.Logger.Fatal(e.Start(":1323"))
 }

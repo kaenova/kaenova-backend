@@ -14,3 +14,7 @@ func CreateUser(name string) User {
 		Name: name,
 	}
 }
+
+func (u *User) RemoveAuthenticator() {
+	u.ID = ""
+}
