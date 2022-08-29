@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
 	live "github.com/kaenova/kaenova-backend/service/live"
 	liveCfg "github.com/kaenova/kaenova-backend/service/live/config"
@@ -25,6 +26,8 @@ func main() {
 		AllowOrigins: "http://local.kaenova.my.id:3000",
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
+
+	f.Use(logger.New())
 
 	// Live Chat Serivce
 	liveChat := livechat.NewLiveChatSerice(livechatCfg.Config{
