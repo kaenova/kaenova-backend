@@ -27,5 +27,5 @@ func (h *HttpService) RegisterHttpRoute(e *fiber.App) {
 	g.Get("/hello", h.helloWorld)
 	g.Get("/status", h.getStatus)
 	g.Post("/golive", h.goLive)
-	g.Post("/goofline", h.goOffline)
+	g.Post("/gooffline", h.goOffline)
 }
