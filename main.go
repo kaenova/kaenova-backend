@@ -23,7 +23,7 @@ func main() {
 	f := fiber.New()
 
 	f.Use(cors.New(cors.Config{
-		AllowOrigins: "http://local.kaenova.my.id:3000",
+		AllowOrigins: "http://local.kaenova.my.id:3000, https://preview.kaenova.my.id, https://kaenova.my.id",
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
 
