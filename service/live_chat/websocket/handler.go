@@ -56,6 +56,11 @@ func (s *WebScoketService) wsHandlerchatWebSocket() func(*fiber.Ctx) error {
 				break
 			}
 
+			if string(msg) == "ping" {
+				ws.WriteMessage(websocket.TextMessage, []byte("pong"))
+				continue
+			}
+
 			// Bind message
 			var wsMsg webSocketMessage
 			err = json.Unmarshal([]byte(msg), &wsMsg)
